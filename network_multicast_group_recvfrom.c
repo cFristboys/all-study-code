@@ -26,8 +26,11 @@ typedef struct Next{
 
 static Data data = {0};//这里只定义了一个存放客户段的结构体，但是可以定义多个，
                       //  实现多个客户端同时通信，理论上用链表形式就可以实现无上限的客户端通信.需要在每次收到消息时遍历一次链表，存在就是之前发送给信息的client，不存在就是新链接的客户端，将客户端加入链表
-                      //这样太浪费资源，，另一个思路，这里的recvfrom作为一个中转站，接受消息，做转发操作，也就是服务端，sendto端，这样应该能实现1对1私聊
-
+                      //这样太浪费资源，，
+                      //另一个思路，这里的recvfrom作为一个中转站，接受消息，做转发操作，也就是服务端，sendto端，这样应该能实现1对1私聊
+                      //但是还是需要做链表，或者数据库存储客户端地址，但是可以做成客户端申请登录，发送登录请求，判断收到内容是否是登录请求的内容
+                       //如果是就存储新地址（加入链表，或者存入数据库），如果不是就做其他任务，比如转发消息（可以设定为客户端先选择发送消息的对象，（对象就需要遍历链表了，但是这样避免了每次都遍历链表操作）然后才是内容），回复数据
+                        //客户端通过switch，发送不同申请，服务端通过Switch，响应不同操作
 void *fun_recvfrom(void *arg)
 {
     Data *data = (Data *)arg;
@@ -78,7 +81,7 @@ int main()
         perror("socket");
         exit(1);
     }
-    setsockopt(data.sockfd, SOL_SOCKET, SO_REUSEADDR, NULL, 0);
+  //  setsockopt(data.sockfd, SOL_SOCKET, SO_REUSEADDR, NULL, 0);这句代码参数错误，正确为89,90行，这句改掉，逻辑没有错误了
 
     struct ip_mreq mreq;
     bzero(&mreq, sizeof(mreq));
@@ -86,7 +89,8 @@ int main()
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     setsockopt(data.sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
 
-
+    int on = 1;
+    setsockopt(data.sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 
         struct sockaddr_in rcvaddr = {
         .sin_family         = AF_INET,
